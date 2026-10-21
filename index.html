@@ -35,7 +35,6 @@
 const SUPABASE_URL = "https://bfxbyviititpswvvrrjf.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KetT_JF8DD3vz2pbePvT_Q_vdvdp4AJ";
 const TASKS={morning:["FOLLOW UP PANAH4D & MOTIF4D (CS1)","POSTINGAN CS2","JUAL PULSA","CARI MEMBER WA (ZOOM)","CEK LINK","MASA AKTIF (CS1)"],night:["UPDATE REKAP PANAH4D & MOTIF4D (CS1)","UPDATE BUKTI JP PANAH4D & MOTIF4D (CS1)","EDIT MOTIF4D & PANAH4D (CS1)","POST POSTINGAN (CS2)","FOLLOW UP PANAH4D & MOTIF4D (CS1)","CARI MEMBERS CS1 & CS2","CEK LINK (CS1)","COPYBANK","FOTO ENWALLET & FOTO PULSA","LAPOR PULSA","INPUT DOC BONUS MOTIF4D & PANAH4D (CS1)","INPUT QCS MOTIF4D & PANAH4D (CS1)","MASA AKTIF (CS1)"]};
-let supabase=null,user=null,taskRows=[],notesRows={morning:null,night:null},filter="all",channel=null,saveTimers={};
 const $=id=>document.getElementById(id);
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),2200)}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
