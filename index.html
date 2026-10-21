@@ -29,7 +29,7 @@
 <section class="notes"><div class="note"><div class="notehead"><strong>Catatan Shift Pagi</strong><span class="status" id="morningSaved"></span></div><textarea id="morningNote" placeholder="Catatan kendala, follow-up, atau info penting…"></textarea><button class="btn primary" data-save="morning" style="margin-top:7px">Simpan catatan</button></div><div class="note"><div class="notehead"><strong>Catatan Shift Malam</strong><span class="status" id="nightSaved"></span></div><textarea id="nightNote" placeholder="Catatan kendala, follow-up, atau info penting…"></textarea><button class="btn primary" data-save="night" style="margin-top:7px">Simpan catatan</button></div></section>
 <footer class="footer"><span>OPSDESK · PANAH4D × MOTIF4D</span><button class="btn" id="reset">Reset checklist</button></footer>
 </div><div id="toast" class="toast"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabaseClient/supabase-js@2"></script>
 <script>
 /* Isi dua nilai ini dari Supabase Dashboard > Project Settings / Connect. Publishable key boleh ada di frontend; JANGAN masukkan service_role/secret key. */
 const SUPABASE_URL = "https://bfxbyviititpswvvrrjf.supabase.co";
@@ -41,15 +41,15 @@ function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&l
 function taskId(shift,i){return shift+"-"+String(i+1).padStart(2,"0")}
 async function init(){
  if(SUPABASE_URL.includes("PASTE_")||SUPABASE_PUBLISHABLE_KEY.includes("PASTE_")){$("loginError").textContent="Setup belum selesai: isi SUPABASE_URL dan SUPABASE_PUBLISHABLE_KEY di file index.html.";return}
- supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
- const {data:{session}}=await supabase.auth.getSession();
- supabase.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>session?enterApp(session.user):showLogin(),0)});
+ supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+ const {data:{session}}=await supabaseClient.auth.getSession();
+ supabaseClient.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>session?enterApp(session.user):showLogin(),0)});
  if(session) await enterApp(session.user);
 }
 function showLogin(){$("app").classList.add("hidden");$("loginPanel").classList.remove("hidden");}
 async function enterApp(u){user=u;$("loginPanel").classList.add("hidden");$("app").classList.remove("hidden");$("who").textContent=u.email||"Staff";$("today").textContent=new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"short",year:"numeric"});await loadAll();subscribeRealtime();}
 async function loadAll(){
- const [t,n]=await Promise.all([supabase.from("jobdesk_tasks").select("*").order("shift").order("sort_order"),supabase.from("jobdesk_notes").select("*").eq("work_date",localDate())]);
+ const [t,n]=await Promise.all([supabaseClient.from("jobdesk_tasks").select("*").order("shift").order("sort_order"),supabaseClient.from("jobdesk_notes").select("*").eq("work_date",localDate())]);
  if(t.error){toast("Gagal memuat tugas: "+t.error.message);return} if(n.error){toast("Gagal memuat catatan: "+n.error.message);return}
  taskRows=t.data||[];notesRows={morning:null,night:null};(n.data||[]).forEach(x=>notesRows[x.shift]=x);
  $("morningNote").value=notesRows.morning?.note||"";$("nightNote").value=notesRows.night?.note||"";
@@ -66,20 +66,20 @@ function renderTasks(shift){const host=$(shift+"Tasks");host.innerHTML="";const 
  if(done&&r.checked_by){const meta=document.createElement("div");meta.className="meta";meta.textContent="Diceklis oleh "+r.checked_by+(r.checked_at?" · "+new Date(r.checked_at).toLocaleString("id-ID",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"");host.append(meta)}
  });
 }
-async function toggleTask(row,checked){const patch={is_done:checked,checked_by:checked?(user.email||"Staff"):null,checked_at:checked?new Date().toISOString():null,updated_at:new Date().toISOString()};const {error}=await supabase.from("jobdesk_tasks").update(patch).eq("id",row.id);if(error){toast("Tidak bisa menyimpan: "+error.message);await loadAll();return}Object.assign(row,patch);renderAll()}
+async function toggleTask(row,checked){const patch={is_done:checked,checked_by:checked?(user.email||"Staff"):null,checked_at:checked?new Date().toISOString():null,updated_at:new Date().toISOString()};const {error}=await supabaseClient.from("jobdesk_tasks").update(patch).eq("id",row.id);if(error){toast("Tidak bisa menyimpan: "+error.message);await loadAll();return}Object.assign(row,patch);renderAll()}
 function renderShift(s){const rows=taskRows.filter(r=>r.shift===s),done=rows.filter(r=>r.is_done).length,total=rows.length,p=total?Math.round(done/total*100):0;$(s+"Count").innerHTML=`${done} / ${total}<small>tugas selesai</small>`;$(s+"Pct").textContent=p+"%";$(s+"Fill").style.width=p+"%";$(s+"Summary").textContent=`${done} dari ${total} selesai`;renderTasks(s)}
 function renderAll(){renderShift("morning");renderShift("night");const total=taskRows.length,done=taskRows.filter(r=>r.is_done).length,p=total?Math.round(done/total*100):0;$("total").textContent=total;$("done").textContent=done;$("pending").textContent=total-done;$("overall").textContent=p+"%"}
-async function saveNote(shift){const note=$(shift+"Note").value;$(shift+"Saved").textContent="Menyimpan…";const payload={shift,work_date:localDate(),note,updated_by:user.email||"Staff",updated_at:new Date().toISOString()};const {data,error}=await supabase.from("jobdesk_notes").upsert(payload,{onConflict:"shift,work_date"}).select().single();if(error){$(shift+"Saved").textContent="Gagal";toast("Catatan gagal disimpan: "+error.message);return}notesRows[shift]=data;$(shift+"Saved").textContent="Tersimpan";toast("Catatan shift tersimpan.")}
-function subscribeRealtime(){if(channel)supabase.removeChannel(channel);channel=supabase.channel("opsdesk-live-"+Math.random().toString(36).slice(2)).on("postgres_changes",{event:"*",schema:"public",table:"jobdesk_tasks"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"jobdesk_notes"},payload=>{if(payload.new?.work_date===localDate())loadAll()}).subscribe((status)=>{if(status==="SUBSCRIBED")toast("Sinkronisasi real-time aktif.")})}
+async function saveNote(shift){const note=$(shift+"Note").value;$(shift+"Saved").textContent="Menyimpan…";const payload={shift,work_date:localDate(),note,updated_by:user.email||"Staff",updated_at:new Date().toISOString()};const {data,error}=await supabaseClient.from("jobdesk_notes").upsert(payload,{onConflict:"shift,work_date"}).select().single();if(error){$(shift+"Saved").textContent="Gagal";toast("Catatan gagal disimpan: "+error.message);return}notesRows[shift]=data;$(shift+"Saved").textContent="Tersimpan";toast("Catatan shift tersimpan.")}
+function subscribeRealtime(){if(channel)supabaseClient.removeChannel(channel);channel=supabaseClient.channel("opsdesk-live-"+Math.random().toString(36).slice(2)).on("postgres_changes",{event:"*",schema:"public",table:"jobdesk_tasks"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"jobdesk_notes"},payload=>{if(payload.new?.work_date===localDate())loadAll()}).subscribe((status)=>{if(status==="SUBSCRIBED")toast("Sinkronisasi real-time aktif.")})}
 function exportReport(){let a=["OPSDESK — PANAH4D × MOTIF4D",new Date().toLocaleString("id-ID"),""];for(const s of ["morning","night"]){a.push("=== "+(s==="morning"?"SHIFT PAGI":"SHIFT MALAM")+" ===");taskRows.filter(r=>r.shift===s).sort((x,y)=>x.sort_order-y.sort_order).forEach(r=>a.push((r.is_done?"[✓] ":"[ ] ")+r.title+(r.checked_by?" — "+r.checked_by:"")));a.push("Catatan:",notesRows[s]?.note||$(""+s+"Note").value||"(Tidak ada catatan)","","")}const url=URL.createObjectURL(new Blob([a.join("\n")],{type:"text/plain;charset=utf-8"})),aTag=document.createElement("a");aTag.href=url;aTag.download="opsdesk-"+localDate()+".txt";aTag.click();URL.revokeObjectURL(url)}
-$("loginBtn").addEventListener("click",async()=>{if(!supabase){await init();if(!supabase)return} $("loginError").textContent="";const {error}=await supabase.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(error)$("loginError").textContent="Login gagal: "+error.message});
+$("loginBtn").addEventListener("click",async()=>{if(!supabaseClient){await init();if(!supabaseClient)return} $("loginError").textContent="";const {error}=await supabaseClient.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(error)$("loginError").textContent="Login gagal: "+error.message});
 $("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
-$("logout").addEventListener("click",()=>supabase.auth.signOut());
+$("logout").addEventListener("click",()=>supabaseClient.auth.signOut());
 document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>{filter=b.dataset.filter;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));renderAll()}));
 document.querySelectorAll("[data-save]").forEach(b=>b.addEventListener("click",()=>saveNote(b.dataset.save)));
 ["morning","night"].forEach(s=>$(s+"Note").addEventListener("input",()=>{clearTimeout(saveTimers[s]);$(s+"Saved").textContent="Belum disimpan";saveTimers[s]=setTimeout(()=>saveNote(s),700)}));
 $("export").addEventListener("click",exportReport);
-$("reset").addEventListener("click",async()=>{if(!confirm("Reset seluruh checklist untuk semua staff? Tindakan ini terlihat oleh semua pengguna."))return;const {error}=await supabase.from("jobdesk_tasks").update({is_done:false,checked_by:null,checked_at:null,updated_at:new Date().toISOString()}).neq("id","");if(error)toast("Reset gagal: "+error.message);else{await loadAll();toast("Checklist direset.")}});
+$("reset").addEventListener("click",async()=>{if(!confirm("Reset seluruh checklist untuk semua staff? Tindakan ini terlihat oleh semua pengguna."))return;const {error}=await supabaseClient.from("jobdesk_tasks").update({is_done:false,checked_by:null,checked_at:null,updated_at:new Date().toISOString()}).neq("id","");if(error)toast("Reset gagal: "+error.message);else{await loadAll();toast("Checklist direset.")}});
 init();
 </script>
 </body></html>
