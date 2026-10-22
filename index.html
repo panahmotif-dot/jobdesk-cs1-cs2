@@ -80,7 +80,53 @@ document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click"
 document.querySelectorAll("[data-save]").forEach(b=>b.addEventListener("click",()=>saveNote(b.dataset.save)));
 ["morning","night"].forEach(s=>$(s+"Note").addEventListener("input",()=>{clearTimeout(saveTimers[s]);$(s+"Saved").textContent="Belum disimpan";saveTimers[s]=setTimeout(()=>saveNote(s),700)}));
 $("export").addEventListener("click",exportReport);
-$("reset").addEventListener("click",async()=>{if(!confirm("Reset seluruh checklist untuk semua staff? Tindakan ini terlihat oleh semua pengguna."))return;const {error}=await supabaseClient.from("jobdesk_tasks").update({is_done:false,checked_by:null,checked_at:null,updated_at:new Date().toISOString()}).neq("id","");if(error)toast("Reset gagal: "+error.message);else{await loadAll();toast("Checklist direset.")}});
-init();
+
+$("reset").addEventListener("click", async () => {
+  if (!supabaseClient || !user) {
+    toast("Silakan login terlebih dahulu.");
+    return;
+  }
+
+  if (!confirm(
+    "Reset seluruh checklist untuk semua staff? Tindakan ini terlihat oleh semua pengguna."
+  )) return;
+
+  const btn = $("reset");
+  btn.disabled = true;
+  btn.textContent = "Mereset...";
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("jobdesk_tasks")
+      .update({
+        is_done: false,
+        checked_by: null,
+        checked_at: null,
+        updated_at: new Date().toISOString()
+      })
+      .neq("id", "")
+      .select("id");
+
+    if (error) {
+      console.error("Reset checklist error:", error);
+      toast("Reset gagal: " + error.message);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      toast("Tidak ada tugas direset. Periksa izin Supabase RLS.");
+      return;
+    }
+
+    await loadAll();
+    toast(data.length + " tugas berhasil direset.");
+  } catch (err) {
+    console.error("Reset error:", err);
+    toast("Terjadi kesalahan saat reset checklist.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Reset checklist";
+  }
+});
 </script>
 </body></html>
