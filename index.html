@@ -17,6 +17,7 @@
   opacity: 0;
   transition: .2s;
   pointer-events: none;
+  z-index: 9999;
 }
 
 .toast.show {
@@ -44,7 +45,7 @@
 <section class="shift"><div class="sh"><div class="shtitle"><div class="sun moon">☾</div><div><h3>Shift Malam</h3><small>NIGHT OPERATIONS</small></div></div><div class="count" id="nightCount">0 / 13<small>tugas selesai</small></div></div><div class="body"><div class="progress"><div class="ptop"><span>PROGRESS SHIFT</span><b id="nightPct">0%</b></div><div class="track"><div id="nightFill" class="fill"></div></div></div><div id="nightTasks" class="tasks"></div><div class="foot"><span>Completion</span><b id="nightSummary">0 dari 13</b></div></div></section>
 </div></section>
 <section class="notes"><div class="note"><div class="notehead"><strong>Catatan Shift Pagi</strong><span class="status" id="morningSaved"></span></div><textarea id="morningNote" placeholder="Catatan kendala, follow-up, atau info penting…"></textarea><button class="btn primary" data-save="morning" style="margin-top:7px">Simpan catatan</button></div><div class="note"><div class="notehead"><strong>Catatan Shift Malam</strong><span class="status" id="nightSaved"></span></div><textarea id="nightNote" placeholder="Catatan kendala, follow-up, atau info penting…"></textarea><button class="btn primary" data-save="night" style="margin-top:7px">Simpan catatan</button></div></section>
-<footer class="footer"><span>OPSDESK · PANAH4D × MOTIF4D</span><button class="btn" id="reset">Reset checklist</button></footer>
+<footer class="footer"><span>OPSDESK · PANAH4D × MOTIF4D</span><button type="button" class="btn" id="reset" style="position:relative;z-index:2;pointer-events:auto">Reset checklist</button></footer>
 </div><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -121,7 +122,6 @@ $("reset").addEventListener("click", async () => {
         checked_at: null,
         updated_at: new Date().toISOString()
       })
-      .neq("id", "")
       .select("id");
 
     if (error) {
