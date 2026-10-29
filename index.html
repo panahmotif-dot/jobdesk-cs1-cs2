@@ -121,7 +121,8 @@ $("reset").addEventListener("click", async () => {
         checked_by: null,
         checked_at: null,
         updated_at: new Date().toISOString()
-      })
+            })
+      .not("id", "is", null)
       .select("id");
 
     if (error) {
